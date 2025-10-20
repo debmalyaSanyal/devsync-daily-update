@@ -1,0 +1,38 @@
+name: Daily Repository Update
+
+# Runs on schedule (UTC) and supports manual trigger for quick verification
+on:
+  schedule:
+    # runs daily at 03:30 UTC (that's 09:00 IST). Change if you want another fixed time.
+    - cron: '30 3 * * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # allow the workflow to push commits (GITHUB_TOKEN)
+
+jobs:
+  add-daily-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Create or update DAILY_UPDATE.md
+        run: |
+          now="$(date -u +"%Y-%m-%d %H:%M:%SZ")"
+          file="DAILY_UPDATE.md"
+          if [ ! -f "$file" ]; then
+            echo "# Daily Updates" > "$file"
+            echo "" >> "$file"
+          fi
+          echo "- Automated update from GitHub Actions at ${now} (UTC)" >> "$file"
+
+      - name: Commit change - 22f3003000@ds.study.iitm.ac.in
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add DAILY_UPDATE.md
+          git commit -m "chore: automated daily update $(date -u +"%Y-%m-%dT%H:%M:%SZ")" || echo "No changes to commit"
+          git push
