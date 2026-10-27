@@ -1,38 +1,48 @@
-name: Daily Repository Update
+name: Daily Repository Updates
 
-# Runs on schedule (UTC) and supports manual trigger for quick verification
 on:
   schedule:
-    # runs daily at 03:30 UTC (that's 09:00 IST). Change if you want another fixed time.
-    - cron: '30 3 * * *'
-  workflow_dispatch: {}
+    # 9:00 AM, 1:00 PM, 5:00 PM and 9:00 PM IST
+    - cron: "30 3,7,11,15 * * *"
+  workflow_dispatch:
 
 permissions:
-  contents: write   # allow the workflow to push commits (GITHUB_TOKEN)
+  contents: write
 
 jobs:
-  add-daily-commit:
+  daily-commits:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          persist-credentials: true
 
-      - name: Create or update DAILY_UPDATE.md
+      - name: Record daily update
         run: |
-          now="$(date -u +"%Y-%m-%d %H:%M:%SZ")"
-          file="DAILY_UPDATE.md"
-          if [ ! -f "$file" ]; then
-            echo "# Daily Updates" > "$file"
-            echo "" >> "$file"
-          fi
-          echo "- Automated update from GitHub Actions at ${now} (UTC)" >> "$file"
+          mkdir -p daily-logs
 
-      - name: Commit change - 22f3003000@ds.study.iitm.ac.in
+          DATE=$(date -u +"%Y-%m-%d")
+          TIME=$(date -u +"%H:%M:%S UTC")
+          FILE="daily-logs/${DATE}.md"
+
+          if [ ! -f "$FILE" ]; then
+            echo "# Repository Activity - ${DATE}" > "$FILE"
+            echo "" >> "$FILE"
+          fi
+
+          echo "- Automated repository maintenance at ${TIME}" >> "$FILE"
+
+      - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add DAILY_UPDATE.md
-          git commit -m "chore: automated daily update $(date -u +"%Y-%m-%dT%H:%M:%SZ")" || echo "No changes to commit"
+
+          git add daily-logs/
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore: daily maintenance $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push
